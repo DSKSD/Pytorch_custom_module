@@ -32,7 +32,7 @@ def getBatch(batch_size,train_data):
         yield batch
         
         
-def pad_to_batch(batch,x_to_ix,y_to_ix):
+def pad_to_batch_seq_pairs(batch,x_to_ix,y_to_ix):
     
     sorted_batch =  sorted(batch, key=lambda b:b[0].size(1),reverse=True) # sort by len
     x,y = list(zip(*sorted_batch))
@@ -55,6 +55,17 @@ def pad_to_batch(batch,x_to_ix,y_to_ix):
     target_len = [list(map(lambda s: s ==0, t.data)).count(False) for t in target_var]
     
     return input_var, target_var, input_len, target_len
+
+def pad_to_batch_so_seq(batch,word2index):
+    x,y = zip(*batch)
+    max_x = max([s.size(1) for s in x])
+    x_p = []
+    for i in range(len(batch)):
+        if x[i].size(1) < max_x:
+            x_p.append(torch.cat([x[i], Variable(torch.LongTensor([word2index['<pad>']] * (max_x - x[i].size(1)))).view(1, -1)], 1))
+        else:
+            x_p.append(x[i])
+    return torch.cat(x_p), torch.cat(y).view(-1)
 
 
 def build_vocab_seq_pairs(corpus,tied_vocab=False,noise=0,max_length=30):
