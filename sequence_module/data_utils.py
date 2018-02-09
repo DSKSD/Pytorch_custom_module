@@ -70,6 +70,72 @@ def pad_to_batch_so_seq(batch,word2index):
 
 def build_vocab_seq_pairs(corpus,tied_vocab=False,noise=0,max_length=30):
     """
+    corpus : [[],[]] ... tokenized  [source,target] pairs
+    """
+    X_r,y_r=[],[] # raw
+
+    for parallel in corpus:
+        try:
+            so,ta = parallel
+            if seq_check(so,ta,max_length):
+                X_r.append(so)
+                y_r.append(ta)
+        except Exception as e:
+            print(str(e))
+            break
+    print("Num of data : ",len(X_r),len(y_r))
+
+    if tied_vocab:
+        vocab = list(set(flatten(X_r+y_r)))
+        print("vocab : ",len(vocab))
+        word2index = {'<pad>':0,'<unk>':1,'<s>':2,'</s>':3}
+        for vo in vocab:
+            word2index[vo]=len(word2index)
+        #index2word = {v:k for k,v in word2index.items()}
+        
+        X_p,y_p=[],[]
+        for so,ta in zip(X_r,y_r):
+            X_p.append(prepare_sequence(['<s>']+so+['</s>'],word2index).view(1,-1))
+            y_p.append(prepare_sequence(ta+['</s>'],word2index).view(1,-1))
+        train_data = list(zip(X_p,y_p))
+        
+        return train_data,word2index
+        
+    else:
+        source_vocab = list(set(flatten(X_r)))
+        target_vocab = list(set(flatten(y_r)))
+        print("vocab : ",len(source_vocab),len(target_vocab))
+
+        source2index = {'<pad>':0,'<unk>':1,'<s>':2,'</s>':3}
+        for vo in source_vocab:
+            source2index[vo]=len(source2index)
+        #index2source = {v:k for k,v in source2index.items()}
+
+        target2index = {'<pad>':0,'<unk>':1,'<s>':2,'</s>':3}
+        for vo in target_vocab:
+            target2index[vo]=len(target2index)
+        #index2target = {v:k for k,v in target2index.items()}
+        
+        X_p,y_p=[],[]
+        for so,ta in zip(X_r,y_r):
+            X_p.append(prepare_sequence(['<s>']+so+['</s>'],source2index).view(1,-1))
+            y_p.append(prepare_sequence(ta+['</s>'],target2index).view(1,-1))
+        train_data = list(zip(X_p,y_p))
+        
+        return train_data,source2index,target2index
+
+def seq_check(normalized_so,normalized_ta,max_length):
+    MIN_LENGTH=1
+    MAX_LENGTH=max_length
+    if len(normalized_so)>=MIN_LENGTH and len(normalized_so)<=MAX_LENGTH \
+    and len(normalized_ta)>=MIN_LENGTH and len(normalized_ta)<=MAX_LENGTH:
+        return True
+    else:
+        return False
+
+
+def build_vocab_seq_pairs_with_augment(corpus,tied_vocab=False,noise=0,max_length=30):
+    """
     corpus : \t로 구분 되는 sequence pair의 list
     """
     X_r,y_r=[],[] # raw
@@ -135,16 +201,8 @@ def build_vocab_seq_pairs(corpus,tied_vocab=False,noise=0,max_length=30):
         train_data = list(zip(X_p,y_p))
         
         return train_data,source2index,target2index
-
-def seq_check(normalized_so,normalized_ta,max_length):
-    MIN_LENGTH=1
-    MAX_LENGTH=max_length
-    if len(normalized_so)>=MIN_LENGTH and len(normalized_so)<=MAX_LENGTH \
-    and len(normalized_ta)>=MIN_LENGTH and len(normalized_ta)<=MAX_LENGTH:
-        return True
-    else:
-        return False
-
+    
+    
 def make_noise(text,num=1):
     result=[]
     text = deepcopy(text)

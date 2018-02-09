@@ -3,8 +3,11 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 import torch.nn.functional as F
-from attention import Attention
-
+try:
+    from attention import Attention
+except:
+    from .attention import Attention
+    
 class Decoder(nn.Module):
     def __init__(self, input_size, embedding_size, hidden_size, n_layers=1,dropout_p=0.3,use_cuda=False):
         super(Decoder, self).__init__()
@@ -102,7 +105,7 @@ class Decoder(nn.Module):
         
         decode=[]
         # Apply GRU to the output so far
-        for i in range(max_length):
+        for i in range(max_length): # because of <s> , </s>
 
             _, hidden = self.gru(torch.cat((embedded,context),2), hidden) # h_t = f(h_{t-1},y_{t-1},c)
             concated = torch.cat((hidden,context.transpose(0,1)),2) # y_t = g(h_t,y_{t-1},c)
